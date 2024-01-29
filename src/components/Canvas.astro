@@ -1,0 +1,147 @@
+<div class="wrapper">
+  <canvas id="canvas"></canvas>
+  <p id="percentage">0%</p>
+</div>
+
+<style>
+  .wrapper {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    background: url(/wipe-reveal/img.jpg) 50% 50% / cover no-repeat;
+  }
+  #canvas {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  #percentage {
+    margin: 0;
+    padding: 0;
+    font-size: 100px;
+    line-height: 1;
+    color: #fff;
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    pointer-events: none;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  }
+</style>
+
+<script>
+  class canvas {
+    constructor() {
+      this.canvas = document.getElementById("canvas");
+      this.percentage = document.getElementById("percentage");
+      this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
+
+      this.setupCanvas();
+
+      this.isDrawing = false;
+      this.prevX = 0;
+      this.prevY = 0;
+
+      this.setupEventListeners();
+    }
+
+    setupCanvas() {
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
+
+      this.percentage.textContent = "0%";
+
+      const patternImage = new Image();
+      patternImage.src = "/wipe-reveal/pattern.png";
+
+      patternImage.onload = () => {
+        const pattern = this.ctx.createPattern(patternImage, "repeat");
+
+        pattern.setTransform(new DOMMatrix().scale(0.8, 0.8));
+
+        this.ctx.fillStyle = pattern;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.ctx.lineJoin = "round";
+        this.ctx.lineCap = "round";
+        this.ctx.lineWidth = this.canvas.width * 0.2;
+
+        this.ctx.globalCompositeOperation = "destination-out";
+      };
+    }
+
+    draw(e) {
+      if (!this.isDrawing) return;
+
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const y = e.touches ? e.touches[0].clientY : e.clientY;
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.prevX, this.prevY);
+      this.ctx.lineTo(x, y);
+      this.ctx.stroke();
+      this.prevX = x;
+      this.prevY = y;
+
+      const imageData = this.ctx.getImageData(
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
+      const data = imageData.data;
+
+      let opacityPixelCount = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] === 0) {
+          opacityPixelCount++;
+        }
+      }
+
+      const totalPixelCount = this.canvas.width * this.canvas.height;
+      const opacityPercentage = Math.round(
+        (opacityPixelCount / totalPixelCount) * 100
+      );
+
+      this.percentage.textContent = opacityPercentage + "%";
+    }
+
+    startDrawing(e) {
+      this.isDrawing = true;
+      this.prevX = e.touches ? e.touches[0].clientX : e.clientX;
+      this.prevY = e.touches ? e.touches[0].clientY : e.clientY;
+    }
+
+    stopDrawing() {
+      this.isDrawing = false;
+    }
+
+    setupEventListeners() {
+      this.canvas.addEventListener("mousedown", (e) => this.startDrawing(e));
+      this.canvas.addEventListener("mousemove", (e) => this.draw(e));
+      this.canvas.addEventListener("mouseup", () => this.stopDrawing());
+      this.canvas.addEventListener("mouseout", () => this.stopDrawing());
+
+      // タッチイベントを追加
+      this.canvas.addEventListener("touchstart", (e) => this.startDrawing(e));
+      this.canvas.addEventListener("touchmove", (e) => this.draw(e));
+      this.canvas.addEventListener("touchend", () => this.stopDrawing());
+      this.canvas.addEventListener("touchcancel", () => this.stopDrawing());
+
+      // ウィンドウのリサイズに対応
+      let resizeTimer;
+      window.addEventListener("resize", () => {
+        if (resizeTimer != null) {
+          clearTimeout(resizeTimer);
+        }
+        resizeTimer = setTimeout(() => {
+          this.setupCanvas();
+        }, 100);
+      });
+    }
+  }
+  new canvas();
+</script>
