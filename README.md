@@ -1,1 +1,1 @@
-https://imwinterer.github.io/fbm-image-transitions-with-webgl/
+https://imwinterer.github.io/wipe-reveal/
